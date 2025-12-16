@@ -7,6 +7,7 @@ const appModulePath = require('app-module-path');
 const sassLookup = require('sass-lookup');
 const stylusLookup = require('stylus-lookup');
 const { createMatchPath } = require('tsconfig-paths');
+const resolveHashImport = require('./lib/resolve-hash-import.js');
 
 const debug = debuglog('cabinet');
 
@@ -225,6 +226,12 @@ function jsLookup(options) {
 function tsLookup({ dependency, filename, directory, webpackConfig, tsConfig, tsConfigPath, noTypeDefinitions }) {
   debug('performing a typescript lookup');
 
+  // Handle #hash imports via package.json imports field
+  if (dependency && dependency.startsWith('#')) {
+    const hashResult = resolveHashImport(dependency, filename);
+    if (hashResult) return hashResult;
+  }
+
   if (typeof tsConfig === 'string') {
     tsConfigPath ||= path.dirname(tsConfig);
   }
@@ -334,6 +341,12 @@ function commonJSLookup(options) {
   if (!dependency) {
     debug('blank dependency given. Returning early.');
     return '';
+  }
+
+  // Handle #hash imports via package.json imports field
+  if (dependency.startsWith('#')) {
+    const hashResult = resolveHashImport(dependency, filename);
+    if (hashResult) return hashResult;
   }
 
   // Need to resolve partials within the directory of the module, not filing-cabinet
